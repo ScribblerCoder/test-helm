@@ -1,0 +1,19 @@
+apiVersion: v2
+name: gzctf
+description: A Helm chart for deploying GZCTF on Kubernetes
+type: application
+version: 0.1.0
+
+dependencies:
+  - name: redis-ha
+    version: 4.27.6
+    repository: https://dandydeveloper.github.io/charts/
+    condition: redis.enabled
+  - name: postgresql-ha
+    version: 14.3.2
+    repository: https://charts.bitnami.com/bitnami
+    condition: postgresql-ha.enabled
+  - name: seaweedfs
+    version: 4.0.0
+    repository: https://seaweedfs.github.io/seaweedfs/helm
+    condition: seaweedfs.enabled

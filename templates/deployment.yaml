@@ -1,0 +1,87 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gzctf-helm.fullname" . }}
+  labels:
+    {{- include "gzctf-helm.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.gzctf.autoscaling.enabled }}
+  replicas: {{ .Values.gzctf.replicaCount }}
+  {{- end }}
+  strategy:
+    type: {{ .Values.gzctf.strategyType }}
+  selector:
+    matchLabels:
+      {{- include "gzctf-helm.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.gzctf.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "gzctf-helm.labels" . | nindent 8 }}
+        {{- with .Values.gzctf.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- with .Values.gzctf.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "gzctf-helm.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.gzctf.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.gzctf.securityContext | nindent 12 }}
+          image: "{{ .Values.gzctf.image.repository }}:{{ .Values.gzctf.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.gzctf.image.pullPolicy }}
+          env:
+            {{- toYaml .Values.gzctf.env | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.gzctf.service.port }}
+              protocol: TCP
+          livenessProbe:
+            {{- toYaml .Values.gzctf.livenessProbe | nindent 12 }}
+          readinessProbe:
+            {{- toYaml .Values.gzctf.readinessProbe | nindent 12 }}
+          resources:
+            {{- toYaml .Values.gzctf.resources | nindent 12 }}
+          volumeMounts:
+            {{- if .Values.gzctf.pvc.create }}
+            - name: {{ include "gzctf-helm.fullname" . }}
+              mountPath: /app/files
+            {{- end }}
+            - name: {{ include "gzctf-helm.fullname" . }}-appsettings
+              mountPath: /app/appsettings.json
+              subPath: appsettings.json
+          {{- with .Values.gzctf.volumeMounts }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      volumes:
+        {{- if .Values.gzctf.pvc.create }}
+        - name: {{ include "gzctf-helm.fullname" . }}
+          persistentVolumeClaim:
+            claimName: {{ include "gzctf-helm.fullname" . }}
+        {{- end }}
+        - name: {{ include "gzctf-helm.fullname" . }}-appsettings
+          configMap:
+            name: {{ include "gzctf-helm.fullname" . }}
+      {{- with .Values.gzctf.volumes }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gzctf.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gzctf.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.gzctf.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

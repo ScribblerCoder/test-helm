@@ -1,0 +1,454 @@
+gzctf:
+  replicaCount: 1
+  strategyType: RollingUpdate
+
+  image:
+    repository: ghcr.io/gztimewalker/gzctf/gzctf
+    pullPolicy: Always
+    tag: "develop"
+
+  env:
+    - name: LC_ALL
+      value: "en_US.UTF-8"
+    - name: GZCTF_ADMIN_PASSWORD
+      value: "xxx"
+
+  clusterRole:
+    create: true
+    rules:
+    - apiGroups:
+      - '*'
+      resources:
+      - '*'
+      verbs:
+      - '*'
+    - nonResourceURLs:
+      - '*'
+      verbs:
+      - '*'
+
+  appsettings: |
+    {
+      "AllowedHosts": "*",
+      "ConnectionStrings": {
+        "Database": "Host=gzctf-postgresql-ha-pgpool:5432;Database=gzctf;Username=postgres;Password=gzctf",
+        "RedisCache": "gzctf-redis-ha-haproxy:6379,password=gzctf"
+      },
+      "Logging": {
+        "LogLevel": {
+          "Default": "Information",
+          "Microsoft": "Warning",
+          "Microsoft.Hosting.Lifetime": "Information"
+        },
+        "Loki": {
+          "Enable": false,
+          "EndpointUri": "http://loki:3100",
+          "Labels": [
+            {
+              "Key": "app",
+              "Value": "gzctf"
+            }
+          ],
+          "PropertiesAsLabels": ["app"],
+          "Credentials": {
+            "Login": "login",
+            "Password": "password"
+          },
+          "Tenant": "my-tenant",
+          "MinimumLevel": "Trace"
+        }
+      },
+      "Telemetry": {
+        "Prometheus": {
+          "Enable": false,
+          "Port": 3000,
+          "TotalNameSuffixForCounters": false
+        },
+        "OpenTelemetry": {
+          "Enable": false,
+          "Protocol": "Grpc",
+          "EndpointUri": "http://jaeger-collector:4317"
+        },
+        "AzureMonitor": {
+          "Enable": false,
+          "ConnectionString": "InstrumentationKey=12345678-abcd-abcd-abcd-12345678..."
+        },
+        "Console": {
+          "Enable": true
+        }
+      },
+      "EmailConfig": {
+        "SenderAddress": "",
+        "SenderName": "",
+        "UserName": "",
+        "Password": "",
+        "Smtp": {
+          "Host": "localhost",
+          "Port": 587,
+          "BypassCertVerify": false
+        }
+      },
+      "XorKey": "gzctf",
+      "ContainerProvider": {
+        "Type": "Kubernetes",
+        "PortMappingType": "Default",
+        "EnableTrafficCapture": false,
+        "PublicEntry": "ctf.example.com",
+        "KubernetesConfig": {
+          // optional
+          "Namespace": "gzctf-challenges",
+          "ConfigPath": "kube-config.yaml",
+          "AllowCIDR": [
+            "10.0.0.0/8"
+          ],
+          "DNS": [
+            "8.8.8.8",
+            "223.5.5.5"
+          ]
+        }
+      },
+      "RequestLogging": false,
+      "DisableRateLimit": false,
+      "RegistryConfig": {
+        "UserName": "",
+        "Password": "",
+        "ServerAddress": ""
+      },
+      "CaptchaConfig": {
+        "Provider": "None",
+        "SiteKey": "...",
+        "SecretKey": "...",
+        "GoogleRecaptcha": {
+          "VerifyAPIAddress": "https://www.recaptcha.net/recaptcha/api/siteverify",
+          "RecaptchaThreshold": "0.5"
+        }
+      },
+      "ForwardedOptions": {
+        "ForwardedHeaders": 5, // a flag enum, see following link
+        "ForwardLimit": 1,
+        "ForwardedForHeaderName": "X-Forwarded-For",
+        // use the following options to allow proxy
+        "TrustedNetworks": ["10.0.0.0/8"],
+        "TrustedProxies": ["10.0.0.1"]
+      },
+      "Kestrel": {
+        "Endpoints": {
+          "Web": {
+            "Url": "http://*:8080"
+          },
+          "Prometheus": {
+            "Url": "http://*:3000"
+          }
+        },
+        "Limits": {
+          "MaxResponseBufferSize": 2048,
+          "MaxRequestBufferSize": 1048576,
+          "MaxRequestLineSize": 8192,
+          "MaxRequestHeadersTotalSize": 32768,
+          "MaxRequestHeaderCount": 100,
+          "MaxRequestBodySize": 27262946,
+          "KeepAliveTimeout": "0.0:5:0",
+          "RequestHeadersTimeout": "0.0:5:0",
+          "MaxConcurrentConnections": null,
+          "MaxConcurrentUpgradedConnections": null
+        },
+        "AddServerHeader": true,
+        "AllowResponseHeaderCompression": true,
+        "AllowSynchronousIO": false,
+        "AllowAlternateSchemes": false,
+        "DisableStringReuse": false,
+        "ConfigurationLoader": null
+      }
+    }
+
+
+  imagePullSecrets: []
+  nameOverride: ""
+  fullnameOverride: ""
+
+  serviceAccount:
+    create: true
+    automount: true
+    annotations: {}
+    name: ""
+
+  podAnnotations: {}
+  podLabels: {}
+
+  podSecurityContext: {}
+  securityContext: {}
+
+  service:
+    annotations: {}
+    type: ClusterIP
+    port: 8080
+
+  ingress:
+    enabled: true
+    className: ""
+    annotations: {}
+    hosts:
+      - host: ctf.example.com
+        paths:
+          - path: /
+            pathType: Prefix
+    tls: []
+
+  resources:
+    requests:
+      cpu: 1000m
+      memory: 384Mi
+
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: http
+
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 100
+    targetCPUUtilizationPercentage: 80
+
+  pvc:
+    create: true
+    storageClassName: ""
+    accessMode: ReadWriteOnce # Please change to ReadWriteMany when deploying multiple instances
+    size: 2Gi
+
+  volumes: []
+
+  volumeMounts: []
+
+  nodeSelector: {}
+
+  tolerations: []
+
+  affinity: {}
+
+
+redis-ha:
+  # -- Deploys a High-Availability Redis cluster
+  enabled: true
+  ## Redis image
+  image:
+    # -- Redis repository
+    repository: public.ecr.aws/docker/library/redis
+    # -- Redis tag
+    tag: 7.2.4-alpine
+  ## Prometheus redis-exporter sidecar
+  exporter:
+    # -- Enable Prometheus redis-exporter sidecar
+    enabled: false
+    # -- Repository to use for the redis-exporter
+    image: public.ecr.aws/bitnami/redis-exporter
+    # -- Tag to use for the redis-exporter
+    tag: 1.58.0
+  persistentVolume:
+    # -- Configures persistence on Redis nodes
+    enabled: false
+  ## Redis specific configuration options
+  redis:
+    # -- Redis convention for naming the cluster group: must match `^[\\w-\\.]+$` and can be templated
+    masterGroupName: gzctf
+    # -- Any valid redis config options in this section will be applied to each server (see `redis-ha` chart)
+    # @default -- See [values.yaml]
+    config:
+      # -- Will save the DB if both the given number of seconds and the given number of write operations against the DB occurred. `""`  is disabled
+      # @default -- `'""'`
+      save: '""'
+  ## Enables a HA Proxy for better LoadBalancing / Sentinel Master support. Automatically proxies to Redis master.
+  haproxy:
+    # -- Enabled HAProxy LoadBalancing/Proxy
+    enabled: true
+    # --  Custom labels for the haproxy pod.
+    labels:
+      app.kubernetes.io/name: gzctf-redis-ha-haproxy
+    metrics:
+      # -- HAProxy enable prometheus metric scraping
+      enabled: true
+    # -- Whether the haproxy pods should be forced to run on separate nodes.
+    hardAntiAffinity: true
+    # -- Additional affinities to add to the haproxy pods.
+    additionalAffinities: {}
+    # -- Assign custom [affinity] rules to the haproxy pods.
+    affinity: |
+
+    # -- [Tolerations] for use with node taints for haproxy pods.
+    tolerations: []
+    # -- HAProxy container-level security context
+    # @default -- See [values.yaml]
+    containerSecurityContext:
+      readOnlyRootFilesystem: true
+
+  # -- Configures redis-ha with AUTH
+  auth: false
+  # -- Existing Secret to use for redis-ha authentication.
+  # By default the redis-secret-init Job is generating this Secret.
+  existingSecret: gzctf-redis
+
+  # -- Whether the Redis server pods should be forced to run on separate nodes.
+  hardAntiAffinity: true
+
+  # -- Additional affinities to add to the Redis server pods.
+  additionalAffinities: {}
+
+  # -- Assign custom [affinity] rules to the Redis pods.
+  affinity: |
+
+  # -- [Tolerations] for use with node taints for Redis pods.
+  tolerations: []
+
+  # -- Assign custom [TopologySpreadConstraints] rules to the Redis pods.
+  ## https://kubernetes.io/docs/concepts/workloads/pods/pod-topology-spread-constraints/
+  topologySpreadConstraints:
+    # -- Enable Redis HA topology spread constraints
+    enabled: false
+    # -- Max skew of pods tolerated
+    # @default -- `""` (defaults to `1`)
+    maxSkew: ""
+    # -- Topology key for spread
+    # @default -- `""` (defaults to `topology.kubernetes.io/zone`)
+    topologyKey: ""
+    # -- Enforcement policy, hard or soft
+    # @default -- `""` (defaults to `ScheduleAnyway`)
+    whenUnsatisfiable: ""
+  # -- Redis HA statefulset container-level security context
+  # @default -- See [values.yaml]
+  containerSecurityContext:
+    readOnlyRootFilesystem: true
+
+redisSecretInit:
+  # -- Enable Redis secret initialization. If disabled, secret must be provisioned by alternative methods
+  enabled: true
+  # -- Redis secret-init name
+  name: redis-secret-init
+
+  image:
+    # -- Repository to use for the Redis secret-init Job
+    # @default -- `""` (defaults to global.image.repository)
+    repository: "" # defaults to global.image.repository
+    # -- Tag to use for the Redis secret-init Job
+    # @default -- `""` (defaults to global.image.tag)
+    tag: "" # defaults to global.image.tag
+    # -- Image pull policy for the Redis secret-init Job
+    # @default -- `""` (defaults to global.image.imagePullPolicy)
+    imagePullPolicy: "" # IfNotPresent
+
+  # -- Secrets with credentials to pull images from a private registry
+  # @default -- `[]` (defaults to global.imagePullSecrets)
+  imagePullSecrets: []
+
+  # -- Annotations to be added to the Redis secret-init Job
+  jobAnnotations: {}
+
+  # -- Annotations to be added to the Redis secret-init Job
+  podAnnotations: {}
+
+  # -- Labels to be added to the Redis secret-init Job
+  podLabels: {}
+
+  # -- Resource limits and requests for Redis secret-init Job
+  resources: {}
+  #  limits:
+  #    cpu: 200m
+  #    memory: 128Mi
+  #  requests:
+  #    cpu: 100m
+  #    memory: 64Mi
+
+  # -- Application controller container-level security context
+  # @default -- See [values.yaml]
+  containerSecurityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+  # -- Redis secret-init Job pod-level security context
+  securityContext: {}
+
+  serviceAccount:
+    # -- Create a service account for the redis pod
+    create: true
+    # -- Service account name for redis pod
+    name: ""
+    # -- Annotations applied to created service account
+    annotations: {}
+    # -- Automount API credentials for the Service Account
+    automountServiceAccountToken: true
+
+  # -- Priority class for Redis secret-init Job
+  # @default -- `""` (defaults to global.priorityClassName)
+  priorityClassName: ""
+
+  # -- Assign custom [affinity] rules to the Redis secret-init Job
+  affinity: {}
+
+  # -- Node selector to be added to the Redis secret-init Job
+  # @default -- `{}` (defaults to global.nodeSelector)
+  nodeSelector: {}
+
+  # -- Tolerations to be added to the Redis secret-init Job
+  # @default -- `[]` (defaults to global.tolerations)
+  tolerations: []
+
+postgresql-ha:
+  enabled: true
+  volumePermissions:
+    enabled: true
+  persistence:
+    enabled: true
+    storageClass: ""
+    accessMode: ReadWriteOnce
+    size: 2Gi
+  postgresql:
+    username: "postgres"
+    password: "gzctf"
+    database: "gzctf"
+
+
+# Override the seaweedfs subchart values
+seaweedfs:
+  # -- Deploys seaweedfs (set to false if you want to use an bucket)
+  enabled: false  # set to false if you want to use an external bucket
+  master:
+    # -- seaweedfs-master replicas
+    replicas: 1
+    data:
+      # -- seaweedfs data storage type
+      type: "persistentVolumeClaim"
+      # -- seaweedfs storage size
+      size: 5Gi
+
+  volume:
+    # -- seaweedfs-volume replicas
+    replicas: 1
+  filer:
+    # -- seaweedfs-filer replicas
+    replicas: 1
+    # -- seaweedfs-filer enable PVC for data persistence
+    enablePVC: true
+    # -- seaweedfs-filer PVC storage size
+    storage: 5Gi
+    data:
+      # -- seaweedfs-filer data storage type
+      type: "persistentVolumeClaim"
+      # -- seaweedfs-filer storage size
+      size: 5Gi
+    s3:
+      # -- seaweedfs-s3 enable. This enables S3 API (Should be left to `true`)
+      enabled: true
+      # -- seaweedfs-s3 enable authentication (no need since seaweed is private to the cluster)
+      enableAuth: false
+      # -- seaweedfs-s3 create bucket upon deploying
+      createBuckets:
+        - name: ctfd-bucket
