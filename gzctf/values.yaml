@@ -431,7 +431,7 @@ seaweedfs:
 
   volume:
     # -- seaweedfs-volume replicas
-    replicas: 1
+    replicas: 2
   filer:
     # -- seaweedfs-filer replicas
     replicas: 1
