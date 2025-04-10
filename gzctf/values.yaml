@@ -417,7 +417,7 @@ postgresql-ha:
 
 
 # Override the seaweedfs subchart values
-seaweedfsnope:
+seaweedfs:
   # -- Deploys seaweedfs (set to false if you want to use an bucket)
   enabled: false  # set to false if you want to use an external bucket
   master:
