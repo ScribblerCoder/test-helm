@@ -1,8 +1,0 @@
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  labels:
-    {{- include "gzctf-helm.labels" . | nindent 4 }}
-  name: {{ include "gzctf-helm.fullname" . }}
-rules:
-{{ .Values.gzctf.clusterRole.rules | toYaml }}
