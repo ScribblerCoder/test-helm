@@ -29,7 +29,7 @@ jobs:
           helm repo add dandydeveloper https://dandydeveloper.github.io/charts/
           helm repo add minio https://charts.min.io/
           helm repo add bitnami https://charts.bitnami.com/bitnami/
-          help dep up
+          helm dep up
 
       - name: Configure Git
         run: |
