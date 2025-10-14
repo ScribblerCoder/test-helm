@@ -27,7 +27,7 @@ jobs:
       - name: Add dependency chart repos
         run: |
           helm repo add dandydeveloper https://dandydeveloper.github.io/charts/
-          help rep add minio https://charts.min.io/
+          helm repo add minio https://charts.min.io/
           helm repo add bitnami https://charts.bitnami.com/bitnami/
           help dep up
 
