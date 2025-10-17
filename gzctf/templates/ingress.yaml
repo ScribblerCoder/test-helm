@@ -1,5 +1,5 @@
 {{- if .Values.gzctf.ingress.enabled -}}
-{{- $fullName := include "gzctf-helm.fullname" . -}}
+{{- $fullName := include "gzctf.fullname" . -}}
 {{- $svcPort := .Values.gzctf.service.port -}}
 {{- if and .Values.gzctf.ingress.className (not (semverCompare ">=1.18-0" .Capabilities.KubeVersion.GitVersion)) }}
   {{- if not (hasKey .Values.gzctf.ingress.annotations "kubernetes.io/ingress.class") }}
@@ -17,7 +17,7 @@ kind: Ingress
 metadata:
   name: {{ $fullName }}
   labels:
-    {{- include "gzctf-helm.labels" . | nindent 4 }}
+    {{- include "gzctf.labels" . | nindent 4 }}
   {{- with .Values.gzctf.ingress.annotations }}
   annotations:
     {{- toYaml . | nindent 4 }}

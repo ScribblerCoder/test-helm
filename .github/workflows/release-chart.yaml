@@ -43,6 +43,6 @@ jobs:
           config: "./.github/configs/cr.yaml"
           charts_dir: .
         env:
-          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_TOKEN: "${{ github.token }}"
 
 

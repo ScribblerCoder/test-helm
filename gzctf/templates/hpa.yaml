@@ -2,14 +2,14 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: {{ include "gzctf-helm.fullname" . }}
+  name: {{ include "gzctf.fullname" . }}
   labels:
-    {{- include "gzctf-helm.labels" . | nindent 4 }}
+    {{- include "gzctf.labels" . | nindent 4 }}
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: {{ include "gzctf-helm.fullname" . }}
+    name: {{ include "gzctf.fullname" . }}
   minReplicas: {{ .Values.gzctf.autoscaling.minReplicas }}
   maxReplicas: {{ .Values.gzctf.autoscaling.maxReplicas }}
   metrics:

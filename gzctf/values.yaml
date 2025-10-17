@@ -1,20 +1,34 @@
+# -- GZCTF application configuration
 gzctf:
+  # -- Number of GZCTF replicas
   replicaCount: 1
+  
+  # -- Deployment strategy type
   strategyType: RollingUpdate
 
+  # -- GZCTF container image configuration
   image:
+    # -- GZCTF image repository
     repository: ghcr.io/gztimewalker/gzctf/gzctf
+    # -- Image pull policy
     pullPolicy: Always
-    tag: "develop"
+    # -- GZCTF image tag
+    tag: "v1.6.2"
 
+  # -- Environment variables for GZCTF container
   env:
+    # -- Locale configuration
     - name: LC_ALL
       value: "en_US.UTF-8"
+    # -- Initial admin password for GZCTF
     - name: GZCTF_ADMIN_PASSWORD
-      value: "xxx"
+      value: "s_piCuwn_ofk123weofEDXEInweo"
 
+  # -- Kubernetes ClusterRole configuration for GZCTF
   clusterRole:
+    # -- Create ClusterRole for GZCTF (required for Kubernetes challenge container management)
     create: true
+    # -- ClusterRole rules (full cluster access for managing challenge containers)
     rules:
     - apiGroups:
       - '*'
@@ -27,12 +41,15 @@ gzctf:
       verbs:
       - '*'
 
+  # -- GZCTF application settings (appsettings.json content)
+  # @default -- See values.yaml for full configuration
   appsettings: |
     {
       "AllowedHosts": "*",
       "ConnectionStrings": {
-        "Database": "Host=gzctf-postgresql-ha-pgpool:5432;Database=gzctf;Username=postgres;Password=gzctf",
-        "RedisCache": "gzctf-redis-ha-haproxy:6379,password=gzctf"
+        "Database": "Host=gzctf-db:5432;Database=gzctf;Username=postgres;Password=gzctf",
+        "RedisCache": "gzctf-garnet:6379,password=gzctf",
+        //"Storage": "minio.s3://serviceUrl=gzctf-minio;keyId=gzctf;key=gzctf;bucket=gzctf-bucket"
       },
       "Logging": {
         "LogLevel": {
@@ -109,19 +126,24 @@ gzctf:
       },
       "RequestLogging": false,
       "DisableRateLimit": false,
-      "RegistryConfig": {
-        "UserName": "",
-        "Password": "",
-        "ServerAddress": ""
+      "Registries": {
+        "ghcr.io": {
+          "UserName": "...",
+          "Password": "ghp_..."
+        },
+        "docker.io": {
+          "UserName": "...",
+          "Password": "..."
+        },
+        "your.custom.registry": {
+          "UserName": "...",
+          "Password": "..."
+        }
       },
       "CaptchaConfig": {
-        "Provider": "None",
-        "SiteKey": "...",
-        "SecretKey": "...",
-        "GoogleRecaptcha": {
-          "VerifyAPIAddress": "https://www.recaptcha.net/recaptcha/api/siteverify",
-          "RecaptchaThreshold": "0.5"
-        }
+        "Provider": "None", // or "CloudflareTurnstile" or "HashPow"
+        "SiteKey": "<Your SITE_KEY>",
+        "SecretKey": "<Your SECRET_KEY>"
       },
       "ForwardedOptions": {
         "ForwardedHeaders": 5, // a flag enum, see following link
@@ -132,14 +154,6 @@ gzctf:
         "TrustedProxies": ["10.0.0.1"]
       },
       "Kestrel": {
-        "Endpoints": {
-          "Web": {
-            "Url": "http://*:8080"
-          },
-          "Prometheus": {
-            "Url": "http://*:3000"
-          }
-        },
         "Limits": {
           "MaxResponseBufferSize": 2048,
           "MaxRequestBufferSize": 1048576,
@@ -161,93 +175,181 @@ gzctf:
       }
     }
 
-
+# -- Image pull secrets for private container registries
   imagePullSecrets: []
+  
+  # -- Override the name of the chart
   nameOverride: ""
+  
+  # -- Override the full name of the chart
   fullnameOverride: ""
 
+  # -- ServiceAccount configuration for GZCTF
   serviceAccount:
+    # -- Create a ServiceAccount for GZCTF
     create: true
+    # -- Automatically mount ServiceAccount token
     automount: true
+    # -- Annotations to add to the ServiceAccount
     annotations: {}
+    # -- ServiceAccount name (generated from chart fullname if not set)
     name: ""
 
+  # -- Annotations to add to GZCTF pods
   podAnnotations: {}
+  
+  # -- Labels to add to GZCTF pods
   podLabels: {}
 
+  # -- Security context for GZCTF pod
   podSecurityContext: {}
+  
+  # -- Security context for GZCTF container
   securityContext: {}
 
+  # -- GZCTF service configuration
   service:
+    # -- Annotations to add to the service
     annotations: {}
+    # -- Service type
     type: ClusterIP
+    # -- Service port
     port: 8080
 
-  ingress:
+  metrics:
+    # -- Enable metrics port
     enabled: true
+    # -- Metrics port number
+    port: 3000
+
+  # -- Ingress configuration for GZCTF
+  ingress:
+    # -- Enable ingress for GZCTF
+    enabled: true
+    # -- Ingress class name
     className: ""
-    annotations: {}
+    # -- Annotations for ingress resource
+    annotations:
+      traefik.ingress.kubernetes.io/service.sticky.cookie: "true"
+      traefik.ingress.kubernetes.io/service.sticky.cookie.name: "LB_Session"
+      traefik.ingress.kubernetes.io/service.sticky.cookie.httponly: "true"
+    # -- Ingress hosts configuration
     hosts:
       - host: ctf.example.com
         paths:
           - path: /
             pathType: Prefix
+    # -- TLS configuration for ingress
     tls: []
 
+  # -- Resource requests and limits for GZCTF container
   resources:
+    # -- Resource requests
     requests:
+      # -- CPU request
       cpu: 1000m
+      # -- Memory request
       memory: 384Mi
 
+  # -- Liveness probe configuration
   livenessProbe:
     httpGet:
       path: /healthz
-      port: http
+      port: metrics
+  
+  # -- Readiness probe configuration
   readinessProbe:
     httpGet:
       path: /healthz
-      port: http
+      port: metrics
 
+  # -- Horizontal Pod Autoscaler configuration
   autoscaling:
+    # -- Enable autoscaling
     enabled: false
+    # -- Minimum number of replicas
     minReplicas: 1
+    # -- Maximum number of replicas
     maxReplicas: 100
+    # -- Target CPU utilization percentage
     targetCPUUtilizationPercentage: 80
 
+  # -- Persistent Volume Claim configuration for GZCTF data
   pvc:
+    # -- Create a PVC for GZCTF
     create: true
-    storageClassName: ""
-    accessMode: ReadWriteOnce # Please change to ReadWriteMany when deploying multiple instances
+    # -- Storage class name for the PVC (empty string uses cluster default)
+    storageClassName: standard
+    # -- Access mode for the PVC (use ReadWriteMany when deploying multiple instances)
+    accessMode: ReadWriteOnce # Either change to ReadWriteMany when deploying multiple instances or use S3 bucket(recommended) and set pvc.create to false
+    # -- Size of the PVC
     size: 2Gi
 
+  # -- Additional volumes for GZCTF pod
   volumes: []
 
+  # -- Additional volume mounts for GZCTF container
   volumeMounts: []
 
+  # -- Node labels for GZCTF pod assignment
   nodeSelector: {}
 
+  # -- Tolerations for GZCTF pod scheduling
   tolerations: []
 
+  # -- Affinity rules for GZCTF pod scheduling
   affinity: {}
 
 
+# -- Garnet cache configuration (override the garnet subchart values)
+garnet:
+  # -- Enable Microsoft Garnet cache-store deployment
+  enabled: true
+  # -- Garnet container image configuration
+  image:
+    # -- Garnet image registry
+    registry: ghcr.io
+    # -- Garnet image repository
+    repostiory: microsoft/garnet
+    # -- Garnet image tag (empty string uses chart appVersion)
+    tag: ""
+  
+  config:
+    # -- Garnet secret (if you want to use an existing secret).
+    # This secret must contains a key called 'garnet.conf'.
+    existingSecret: ""
+    # -- The garnet.conf data content.
+    garnetConf: |
+     {
+       "AuthenticationMode": "Password",
+       "Password": "gzctf"
+     }
+  
+  # -- Persistent storage configuration for Garnet
+  # @default -- Disabled (persistence not needed for cache)
+  persistence:
+    # -- Enable persistent storage for Garnet (not recommended for cache workloads)
+    enabled: false
+
+
+# Override the redis-ha subchart values
 redis-ha:
   # -- Deploys a High-Availability Redis cluster
-  enabled: true
+  enabled: false
   ## Redis image
   image:
     # -- Redis repository
     repository: public.ecr.aws/docker/library/redis
     # -- Redis tag
-    tag: 7.2.4-alpine
+    tag: 7.2.11-alpine
   ## Prometheus redis-exporter sidecar
   exporter:
     # -- Enable Prometheus redis-exporter sidecar
     enabled: false
     # -- Repository to use for the redis-exporter
-    image: public.ecr.aws/bitnami/redis-exporter
+    image: ghcr.io/oliver006/redis_exporter
     # -- Tag to use for the redis-exporter
-    tag: 1.58.0
+    tag: v1.78.0
   persistentVolume:
     # -- Configures persistence on Redis nodes
     enabled: false
@@ -286,10 +388,9 @@ redis-ha:
       readOnlyRootFilesystem: true
 
   # -- Configures redis-ha with AUTH
-  auth: false
-  # -- Existing Secret to use for redis-ha authentication.
-  # By default the redis-secret-init Job is generating this Secret.
-  existingSecret: gzctf-redis
+  auth: true
+  # -- (string) A password that configures a `requirepass` and `masterauth` in the conf parameters (Requires `auth: enabled`)
+  redisPassword: gzctf
 
   # -- Whether the Redis server pods should be forced to run on separate nodes.
   hardAntiAffinity: true
@@ -322,133 +423,179 @@ redis-ha:
   containerSecurityContext:
     readOnlyRootFilesystem: true
 
-redisSecretInit:
-  # -- Enable Redis secret initialization. If disabled, secret must be provisioned by alternative methods
+# -- PostgreSQL database configuration
+postgresql:
+  # -- Enable PostgreSQL deployment
   enabled: true
-  # -- Redis secret-init name
-  name: redis-secret-init
-
+  
+  # -- PostgreSQL image configuration
   image:
-    # -- Repository to use for the Redis secret-init Job
-    # @default -- `""` (defaults to global.image.repository)
-    repository: "" # defaults to global.image.repository
-    # -- Tag to use for the Redis secret-init Job
-    # @default -- `""` (defaults to global.image.tag)
-    tag: "" # defaults to global.image.tag
-    # -- Image pull policy for the Redis secret-init Job
-    # @default -- `""` (defaults to global.image.imagePullPolicy)
-    imagePullPolicy: "" # IfNotPresent
-
-  # -- Secrets with credentials to pull images from a private registry
-  # @default -- `[]` (defaults to global.imagePullSecrets)
-  imagePullSecrets: []
-
-  # -- Annotations to be added to the Redis secret-init Job
-  jobAnnotations: {}
-
-  # -- Annotations to be added to the Redis secret-init Job
-  podAnnotations: {}
-
-  # -- Labels to be added to the Redis secret-init Job
+    # -- Docker registry for PostgreSQL image
+    registry: docker.io
+    # -- PostgreSQL image repository
+    repository: postgres
+    # -- PostgreSQL image tag
+    tag: 16-alpine
+    # -- Image pull policy
+    pullPolicy: IfNotPresent
+    # -- Image pull secrets for private registries
+    imagePullSecrets: []
+  
+  # -- PostgreSQL service configuration
+  service:
+    # -- PostgreSQL service port
+    port: 5432
+  
+  # -- Environment variables for PostgreSQL container
+  env:
+    # -- PostgreSQL password environment variable
+    # @default -- Must match the database password in appsettings.json
+    - name: POSTGRES_PASSWORD
+      value: gzctf # Database password, needs to be consistent with the database password in appsettings.json
+  
   podLabels: {}
-
-  # -- Resource limits and requests for Redis secret-init Job
-  resources: {}
-  #  limits:
-  #    cpu: 200m
-  #    memory: 128Mi
-  #  requests:
-  #    cpu: 100m
-  #    memory: 64Mi
-
-  # -- Application controller container-level security context
-  # @default -- See [values.yaml]
-  containerSecurityContext:
-    allowPrivilegeEscalation: false
-    capabilities:
-      drop:
-        - ALL
-    readOnlyRootFilesystem: true
-    runAsNonRoot: true
-    seccompProfile:
-      type: RuntimeDefault
-
-  # -- Redis secret-init Job pod-level security context
+  
+  # -- PostgreSQL persistent storage configuration
+  persistence:
+    # -- Enable persistent storage for PostgreSQL
+    enabled: true
+    # -- Storage class name for persistent volume (empty string uses cluster default)
+    storageClassName: ""
+    # -- Size of the persistent volume
+    size: 2Gi
+    # -- Access mode for the persistent volume
+    accessMode: ReadWriteOnce
+  
+  # -- Resource requests and limits for PostgreSQL container
+  resources:
+    # -- Resource requests
+    requests:
+      # -- CPU request
+      cpu: 500m
+      # -- Memory request
+      memory: 512Mi
+  
+  # -- Liveness probe configuration for PostgreSQL container
+  livenessProbe: {}
+  
+  # -- Readiness probe configuration for PostgreSQL container
+  readinessProbe: {}
+  
+  # -- Annotations to add to PostgreSQL pods
+  podAnnotations: {}
+  
+  # -- Security context for PostgreSQL pod
+  podSecurityContext: {}
+  
+  # -- Security context for PostgreSQL container
   securityContext: {}
-
-  serviceAccount:
-    # -- Create a service account for the redis pod
-    create: true
-    # -- Service account name for redis pod
-    name: ""
-    # -- Annotations applied to created service account
-    annotations: {}
-    # -- Automount API credentials for the Service Account
-    automountServiceAccountToken: true
-
-  # -- Priority class for Redis secret-init Job
-  # @default -- `""` (defaults to global.priorityClassName)
-  priorityClassName: ""
-
-  # -- Assign custom [affinity] rules to the Redis secret-init Job
-  affinity: {}
-
-  # -- Node selector to be added to the Redis secret-init Job
-  # @default -- `{}` (defaults to global.nodeSelector)
+  
+  # -- Additional volume mounts for PostgreSQL container
+  volumeMounts: []
+  
+  # -- Additional volumes for PostgreSQL pod
+  volumes: []
+  
+  # -- Node labels for PostgreSQL pod assignment
   nodeSelector: {}
-
-  # -- Tolerations to be added to the Redis secret-init Job
-  # @default -- `[]` (defaults to global.tolerations)
+  
+  # -- Affinity rules for PostgreSQL pod scheduling
+  affinity: {}
+  
+  # -- Tolerations for PostgreSQL pod scheduling
   tolerations: []
 
+
+# PostgreSQL High Availability Configuration
+# Bitnami PostgreSQL HA chart with replication manager
 postgresql-ha:
-  enabled: true
+  # -- Enable or disable PostgreSQL HA deployment
+  enabled: false
+  
+  # Container image configuration
+  image:
+    # -- Docker registry for PostgreSQL image
+    registry: docker.io
+    # -- PostgreSQL repository (legacy repmgr version)
+    repository: bitnamilegacy/postgresql-repmgr
+    # -- PostgreSQL image tag (version 17.6.0)
+    tag: 17.6.0-debian-12-r2
+  
+  # Volume permissions initialization
   volumePermissions:
+    # -- Enable init container to set proper volume permissions
     enabled: true
+  
+  # Persistent storage configuration
   persistence:
+    # -- Enable persistent volume for database storage
     enabled: true
+    # -- Storage class name (empty string uses cluster default)
     storageClass: ""
+    # -- Volume access mode
     accessMode: ReadWriteOnce
+    # -- Persistent volume size
     size: 2Gi
+  
+  # PostgreSQL database configuration
   postgresql:
+    # -- PostgreSQL superuser username
     username: "postgres"
+    # -- PostgreSQL superuser password (should be overridden or use secrets)
     password: "gzctf"
+    # -- Default database name to create
     database: "gzctf"
 
+# -- MinIO object storage configuration (override the minio subchart values)
+minio:
+  # -- Enable MinIO deployment (set to false if you want to use an external S3 bucket)
+  enabled: false
+  
+  # -- MinIO bucket configuration
+  buckets:
+    # -- Default bucket to be used by GZCTF
+    # @default -- `download` policy means this bucket is readonly for anonymous access (competitors)
+    - name: gzctf-bucket
+      # -- Bucket access policy (download = readonly for anonymous users)
+      policy: download
+      # -- Whether to purge the bucket on deletion
+      purge: false
+  
+  # -- Ingress configuration for MinIO (used by both GZCTF and competitors)
+  ingress:
+    # -- Enable ingress for MinIO
+    enabled: true
+    # -- Hostnames for MinIO ingress
+    hosts:
+      - minio.example.com
+    # -- Annotations for MinIO ingress
+    annotations:
+      # -- Max body size (0 = unlimited). If using another ingress controller, use the equivalent annotation
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+  
+  # -- MinIO user
+  rootUser: gzctf
+  # -- MinIO password
+  rootPassword: gzctf
 
-# Override the seaweedfs subchart values
-seaweedfs:
-  # -- Deploys seaweedfs (set to false if you want to use an bucket)
-  enabled: false  # set to false if you want to use an external bucket
-  master:
-    # -- seaweedfs-master replicas
-    replicas: 2
-    data:
-      # -- seaweedfs data storage type
-      type: "persistentVolumeClaim"
-      # -- seaweedfs storage size
-      size: 5Gi
+  # -- Number of MinIO replicas/nodes
+  replicas: 3
+  
+  # -- Number of drives per MinIO replica/node
+  drivesPerNode: 1
+  
+  # -- Resource requests and limits for MinIO
+  resources:
+    # -- Resource requests for MinIO
+    requests:
+      # -- Memory request for MinIO
+      memory: 2Gi
+  
+  # -- MinIO persistent storage configuration
+  persistence:
+    # -- Size of persistent volume for each MinIO instance (adjust according to your needs)
+    size: 10Gi
 
-  volume:
-    # -- seaweedfs-volume replicas
-    replicas: 2
-  filer:
-    # -- seaweedfs-filer replicas
-    replicas: 1
-    # -- seaweedfs-filer enable PVC for data persistence
-    enablePVC: true
-    # -- seaweedfs-filer PVC storage size
-    storage: 5Gi
-    data:
-      # -- seaweedfs-filer data storage type
-      type: "persistentVolumeClaim"
-      # -- seaweedfs-filer storage size
-      size: 5Gi
-    s3:
-      # -- seaweedfs-s3 enable. This enables S3 API (Should be left to `true`)
-      enabled: true
-      # -- seaweedfs-s3 enable authentication (no need since seaweed is private to the cluster)
-      enableAuth: false
-      # -- seaweedfs-s3 create bucket upon deploying
-      createBuckets:
-        - name: ctfd-bucket
+# -- Additional Kubernetes manifests to deploy with this Helm chart
+# @default -- []
+extraObjects: []

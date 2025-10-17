@@ -1,9 +1,9 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ include "gzctf-helm.fullname" . }}
+  name: {{ include "gzctf.fullname" . }}
   labels:
-    {{- include "gzctf-helm.labels" . | nindent 4 }}
+    {{- include "gzctf.labels" . | nindent 4 }}
 spec:
   {{- if not .Values.gzctf.autoscaling.enabled }}
   replicas: {{ .Values.gzctf.replicaCount }}
@@ -12,15 +12,16 @@ spec:
     type: {{ .Values.gzctf.strategyType }}
   selector:
     matchLabels:
-      {{- include "gzctf-helm.selectorLabels" . | nindent 6 }}
+      {{- include "gzctf.selectorLabels" . | nindent 6 }}
   template:
     metadata:
-      {{- with .Values.gzctf.podAnnotations }}
       annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+      {{- with .Values.gzctf.podAnnotations }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "gzctf-helm.labels" . | nindent 8 }}
+        {{- include "gzctf.labels" . | nindent 8 }}
         {{- with .Values.gzctf.podLabels }}
         {{- toYaml . | nindent 8 }}
         {{- end }}
@@ -29,7 +30,7 @@ spec:
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
-      serviceAccountName: {{ include "gzctf-helm.serviceAccountName" . }}
+      serviceAccountName: {{ include "gzctf.serviceAccountName" . }}
       securityContext:
         {{- toYaml .Values.gzctf.podSecurityContext | nindent 8 }}
       containers:
@@ -44,32 +45,34 @@ spec:
             - name: http
               containerPort: {{ .Values.gzctf.service.port }}
               protocol: TCP
-          livenessProbe:
-            {{- toYaml .Values.gzctf.livenessProbe | nindent 12 }}
-          readinessProbe:
-            {{- toYaml .Values.gzctf.readinessProbe | nindent 12 }}
+            {{- if .Values.gzctf.metrics.enabled }}
+            - name: metrics
+              containerPort: {{ .Values.gzctf.metrics.port }}
+              protocol: TCP
+            {{- end }}
           resources:
             {{- toYaml .Values.gzctf.resources | nindent 12 }}
           volumeMounts:
-            {{- if .Values.gzctf.pvc.create }}
-            - name: {{ include "gzctf-helm.fullname" . }}
+            {{- if and (not .Values.minio.enabled) (.Values.gzctf.pvc.create) }}
+            - name: {{ include "gzctf.fullname" . }}
               mountPath: /app/files
             {{- end }}
-            - name: {{ include "gzctf-helm.fullname" . }}-appsettings
+            - name: {{ include "gzctf.fullname" . }}-appsettings
               mountPath: /app/appsettings.json
               subPath: appsettings.json
-          {{- with .Values.gzctf.volumeMounts }}
+              readOnly: true
+          {{ with .Values.gzctf.volumeMounts }}
             {{- toYaml . | nindent 12 }}
           {{- end }}
       volumes:
-        {{- if .Values.gzctf.pvc.create }}
-        - name: {{ include "gzctf-helm.fullname" . }}
+        {{ if and (not .Values.minio.enabled) (.Values.gzctf.pvc.create) -}}
+        - name: {{ include "gzctf.fullname" . }}
           persistentVolumeClaim:
-            claimName: {{ include "gzctf-helm.fullname" . }}
+            claimName: {{ include "gzctf.fullname" . }}
         {{- end }}
-        - name: {{ include "gzctf-helm.fullname" . }}-appsettings
-          configMap:
-            name: {{ include "gzctf-helm.fullname" . }}
+        - name: {{ include "gzctf.fullname" . }}-appsettings
+          secret:
+            secretName: {{ include "gzctf.fullname" . }}
       {{- with .Values.gzctf.volumes }}
         {{- toYaml . | nindent 8 }}
       {{- end }}
