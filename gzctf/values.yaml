@@ -506,10 +506,11 @@ postgresql:
   tolerations: []
 
 
+
 # PostgreSQL High Availability Configuration
 # Bitnami PostgreSQL HA chart with replication manager
 postgresql-ha:
-  # -- Enable or disable PostgreSQL HA deployment
+  # -- Enable or disable PostgreSQL HA deployment (THIS USES BITNAMI LEGACY IMAGES BY DEFAULT WHICH NO LONGER RECIEVE RPOPER SECURITY UPDATES)
   enabled: false
   
   # Container image configuration
